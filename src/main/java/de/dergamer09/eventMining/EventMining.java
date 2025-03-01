@@ -61,7 +61,7 @@ public final class EventMining extends JavaPlugin implements Listener, CommandEx
     @Override
     public void onEnable() {
         Bukkit.getPluginManager().registerEvents(this, this);
-        getCommand("event").setExecutor(this);
+        Objects.requireNonNull(getCommand("event")).setExecutor(this);
         createDatabaseFolder();
         connectDatabase();
         setupBossBar();
@@ -127,7 +127,7 @@ public final class EventMining extends JavaPlugin implements Listener, CommandEx
 
         @Override
         public String getAuthor() {
-            return plugin.getDescription().getAuthors().toString();
+            return String.join(", ", plugin.getDescription().getAuthors());
         }
 
         @Override
@@ -150,88 +150,6 @@ public final class EventMining extends JavaPlugin implements Listener, CommandEx
                 return String.valueOf(playerPoints.getOrDefault(player.getUniqueId(), 0));
             }
             return null;
-        }
-    }
-
-    private Material getRandomWeightedBlock() {
-        return weightedBlocks.get(random.nextInt(weightedBlocks.size()));
-    }
-
-    private Material getRandomOre() {
-        return getRandomWeightedBlock();
-    }
-
-    private void generateRandomMine() {
-        Bukkit.broadcastMessage("§eDie zufällige Mine wird generiert...");
-        if (pos1 == null || pos2 == null) return;
-        World world = pos1.getWorld();
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (int x = Math.min(pos1.getBlockX(), pos2.getBlockX()); x <= Math.max(pos1.getBlockX(), pos2.getBlockX()); x++) {
-                    for (int y = Math.min(pos1.getBlockY(), pos2.getBlockY()); y <= Math.max(pos1.getBlockY(), pos2.getBlockY()); y++) {
-                        for (int z = Math.min(pos1.getBlockZ(), pos2.getBlockZ()); z <= Math.max(pos1.getBlockZ(), pos2.getBlockZ()); z++) {
-                            Location blockLoc = new Location(world, x, y, z);
-                            world.getBlockAt(blockLoc).setType(getRandomOre());
-                        }
-                    }
-                }
-                Bukkit.broadcastMessage("§eDie Mining-Zone wurde zufällig generiert!");
-            }
-        }.runTask(this);
-    }
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) return false;
-        Player player = (Player) sender;
-
-        if (label.equalsIgnoreCase("event") && args.length == 1) {
-            if (args[0].equalsIgnoreCase("pos1")) {
-                pos1 = player.getLocation();
-                player.sendMessage("§aPosition 1 für das Event gesetzt!");
-                return true;
-            }
-            if (args[0].equalsIgnoreCase("pos2")) {
-                pos2 = player.getLocation();
-                player.sendMessage("§aPosition 2 für das Event gesetzt!");
-                return true;
-            }
-            if (args[0].equalsIgnoreCase("set")) {
-                if (pos1 == null || pos2 == null) {
-                    player.sendMessage("§cSetze zuerst Position 1 und 2 mit /event pos1 und /event pos2!");
-                    return false;
-                }
-                player.sendMessage("§aDas Mining-Gebiet wurde gesetzt! Die Mine wird generiert...");
-                eventActive = true;
-                eventEndTime = System.currentTimeMillis() + eventDuration;
-                bossBar.setVisible(true);
-                bossBar.setTitle("§eMining Event - Läuft jetzt!");
-                generateRandomMine();
-                return true;
-            }
-            if (args[0].equalsIgnoreCase("top10")) {
-                showTop10(player);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void showTop10(Player player) {
-        try {
-            PreparedStatement statement = connection.prepareStatement("SELECT uuid, points FROM player_points ORDER BY points DESC LIMIT 10");
-            ResultSet rs = statement.executeQuery();
-            player.sendMessage("§e--- Top 10 Mining Madness Spieler ---");
-            int rank = 1;
-            while (rs.next()) {
-                UUID uuid = UUID.fromString(rs.getString("uuid"));
-                int points = rs.getInt("points");
-                Player p = Bukkit.getPlayer(uuid);
-                player.sendMessage("§bPlatz " + rank + ": " + (p != null ? p.getName() : uuid) + " - " + points + " Punkte");
-                rank++;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 }
